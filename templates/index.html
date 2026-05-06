@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Focus Farm</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── Auth screen ─────────────────────────────────────────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 5-8 5z"/></svg>
+      </div>
+      <div class="auth-logo-title">Focus Farm</div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" data-mode="login" onclick="setAuthMode('login')">Sign in</button>
+      <button class="auth-tab" data-mode="register" onclick="setAuthMode('register')">Register</button>
+    </div>
+    <div class="auth-field">
+      <label>Username</label>
+      <input type="text" id="auth-username" placeholder="Enter username" autocomplete="username">
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="Enter password" autocomplete="current-password">
+    </div>
+    <button class="auth-submit" onclick="submitAuth()">Continue</button>
+    <div class="auth-error" id="auth-error"></div>
+  </div>
+</div>
+
+<!-- ── Main app ─────────────────────────────────────────────────────────────── -->
+<div id="app-screen">
+
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M17 8C8 10 5.9 16.17 3.82 21.34L5.71 22l1-2.3A4.49 4.49 0 0 0 8 20C19 20 22 3 22 3c-1 2-8 5-8 5z"/></svg>
+    </div>
+    <div>
+      <div class="htitle">Focus Farm</div>
+      <div class="hsub">Welcome, <span id="app-username"></span></div>
+    </div>
+    <div class="hstats">
+      <div class="hstat"><div class="v" id="hdr-ops">0</div><div class="l">Sessions</div></div>
+      <div class="hstat"><div class="v" id="hdr-time">0m</div><div class="l">Focused</div></div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Sign out</button>
+  </div>
+
+  <div class="nav">
+    <button class="nb active" onclick="showTab('farm',this)">&#127807; Farm</button>
+    <button class="nb" onclick="showTab('ops',this)">&#9200; Focus</button>
+    <button class="nb" onclick="showTab('squad',this)">&#128101; Squad</button>
+    <button class="nb" onclick="showTab('achievements',this)">&#127942; Awards</button>
+    <button class="nb" onclick="showTab('log',this)">&#128221; Log</button>
+  </div>
+
+  <!-- Farm tab -->
+  <div id="tab-farm" class="tab active">
+    <div id="unlock-pop" class="unlock-pop">
+      <div style="font-size:26px" id="upop-icon">&#127807;</div>
+      <div><div class="ut" id="upop-title">New tile unlocked!</div><div class="us" id="upop-sub">Your farm is growing</div></div>
+    </div>
+    <div class="tier-row">
+      <div class="tier-pill"><div class="td" style="background:#c8b89a"></div>Soil</div>
+      <div class="tier-pill"><div class="td" style="background:#6aaa50"></div>Crops</div>
+      <div class="tier-pill"><div class="td" style="background:#d4a040"></div>Structures</div>
+      <div class="tier-pill"><div class="td" style="background:#5aaad0"></div>Water</div>
+      <div class="tier-pill"><div class="td" style="background:#c060c0"></div>Special</div>
+    </div>
+    <div class="card" style="padding:8px">
+      <canvas id="farm-canvas" height="260" class="farm-canvas"></canvas>
+    </div>
+    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:-4px;margin-bottom:12px;letter-spacing:0.5px" id="farm-cap">0 / 20 tiles cultivated</div>
+  </div>
+
+  <!-- Focus tab -->
+  <div id="tab-ops" class="tab">
+    <div class="card">
+      <div class="slabel">Focus Timer</div>
+      <div class="timer-area">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#f0f0f0" stroke-width="7"/>
+            <circle id="ring" cx="50" cy="50" r="42" fill="none" stroke="#3db87a" stroke-width="7"
+              stroke-dasharray="263.9" stroke-dashoffset="0" stroke-linecap="round"
+              transform="rotate(-90 50 50)" style="transition:stroke-dashoffset 1s linear,stroke 0.5s"/>
+          </svg>
+          <div class="ring-inner">
+            <div class="rt" id="timer-disp">25:00</div>
+            <div class="rs" id="timer-st">ready</div>
+          </div>
+        </div>
+        <div class="timer-right">
+          <div class="dur-row">
+            <label>Duration</label>
+            <input type="range" id="dur-sl" min="5" max="60" step="5" value="25" oninput="onDur(this.value)">
+            <span id="dur-lbl">25 min</span>
+          </div>
+          <div class="hint" id="op-hint">Complete a session to unlock a farm tile</div>
+          <div class="btn-row">
+            <button class="primary" id="start-btn" onclick="startOp()">&#9654; Start</button>
+            <button id="abort-btn" onclick="abortOp()" disabled>Give up</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="sc"><div class="sv" id="s-s">0</div><div class="sl">Sessions</div></div>
+      <div class="sc"><div class="sv" id="s-m">0</div><div class="sl">Minutes</div></div>
+      <div class="sc"><div class="sv" id="s-k">0</div><div class="sl">Streak</div></div>
+      <div class="sc"><div class="sv" id="s-t">0</div><div class="sl">Tiles</div></div>
+    </div>
+    <div class="card">
+      <div class="slabel">Focus Trends (last 14 days)</div>
+      <div style="font-size:11px;color:#aaa;margin-bottom:6px" id="streak-display"></div>
+      <div class="chart-wrap"><canvas id="focus-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Squad tab -->
+  <div id="tab-squad" class="tab">
+    <div class="card">
+      <div id="squad-content">
+        <div class="no-squad" style="color:#bbb;font-size:13px;padding:12px 0">Loading...</div>
+      </div>
+    </div>
+    <div id="squad-stats"></div>
+  </div>
+
+  <!-- Achievements tab -->
+  <div id="tab-achievements" class="tab">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="slabel" style="margin:0">Achievements</div>
+        <div id="ach-progress" style="font-size:12px;color:#aaa"></div>
+      </div>
+      <div id="ach-list"></div>
+    </div>
+  </div>
+
+  <!-- Log tab -->
+  <div id="tab-log" class="tab">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="slabel" style="margin:0">Session history</div>
+        <a href="/api/sessions/export" style="font-size:11px;color:#3db87a;text-decoration:none;font-weight:600">&#11015; Export CSV</a>
+      </div>
+      <div id="log-list">
+        <div style="font-size:12px;color:#bbb;padding:8px 0;text-align:center">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app-screen -->
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Database — each person has their own local copy
+focus_farm.db
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Exports
+exports/*.csv
+
+# IDE files
+.idea/
+.vscode/
+*.DS_Store
+
+# Environment variables
+.env
