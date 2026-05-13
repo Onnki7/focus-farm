@@ -6,6 +6,7 @@ let state = {
   interval: null, squadPoll: null,
   unlockedTiles: [], highlight: -1,
   chart: null,
+  honestyChart: null,  // 成员3新增
 };
 const CIRC = 263.9;
 
@@ -136,12 +137,11 @@ function drawFarm() {
   cv.width = W; cv.height = 270;
   const ctx = cv.getContext('2d');
   const cols = 5, rows = 4;
-  const pad = 6;                          // gap between tiles
+  const pad = 6;
   const tw = Math.floor((W - pad * (cols + 1)) / cols);
   const th = Math.floor((270 - pad * (rows + 1)) / rows);
-  const r = 10;                           // corner radius
+  const r = 10;
 
-  // ── Grass background ──────────────────────────────────────────────────────
   const grassGrad = ctx.createLinearGradient(0, 0, 0, 270);
   grassGrad.addColorStop(0,   '#c8e6a0');
   grassGrad.addColorStop(0.5, '#b8d890');
@@ -149,7 +149,6 @@ function drawFarm() {
   ctx.fillStyle = grassGrad;
   ctx.fillRect(0, 0, W, 270);
 
-  // Subtle grass texture — small darker dots
   ctx.fillStyle = 'rgba(60,120,30,0.07)';
   for (let gx = 4; gx < W; gx += 12) {
     for (let gy = 4; gy < 270; gy += 12) {
@@ -165,7 +164,6 @@ function drawFarm() {
     const y = pad + row * (th + pad);
     const on = i < (state.unlockedTiles || []).length;
 
-    // ── Drop shadow ────────────────────────────────────────────────────────
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.18)';
     ctx.shadowBlur  = 6;
@@ -173,7 +171,6 @@ function drawFarm() {
     ctx.shadowOffsetY = 3;
 
     if (on) {
-      // Tile background — gradient for slight depth
       const bg = TILE_BG[Math.min(state.unlockedTiles[i], TILE_BG.length - 1)];
       const tileGrad = ctx.createLinearGradient(x, y, x, y + th);
       tileGrad.addColorStop(0, lighten(bg, 18));
@@ -182,14 +179,12 @@ function drawFarm() {
       roundRect(ctx, x, y, tw, th, r);
       ctx.fill();
     } else {
-      // Locked tile — muted, slightly transparent
       roundRect(ctx, x, y, tw, th, r);
       ctx.fillStyle = 'rgba(210,205,195,0.85)';
       ctx.fill();
     }
     ctx.restore();
 
-    // ── Tile top-edge highlight (subtle 3D) ────────────────────────────────
     if (on) {
       ctx.save();
       roundRect(ctx, x, y, tw, 4, r);
@@ -198,7 +193,6 @@ function drawFarm() {
       ctx.restore();
     }
 
-    // ── Clip future drawing to tile shape ──────────────────────────────────
     ctx.save();
     roundRect(ctx, x, y, tw, th, r);
     ctx.clip();
@@ -208,7 +202,6 @@ function drawFarm() {
         TILE_TYPES[Math.min(state.unlockedTiles[i], TILE_TYPES.length - 1)],
         x, y, tw, th);
     } else {
-      // Locked — "?" with lock icon feel
       ctx.fillStyle = 'rgba(160,150,135,0.7)';
       ctx.font = `bold ${Math.floor(th * 0.38)}px sans-serif`;
       ctx.textAlign = 'center';
@@ -217,7 +210,6 @@ function drawFarm() {
     }
     ctx.restore();
 
-    // ── Highlight glow for newly unlocked tile ─────────────────────────────
     if (i === state.highlight) {
       ctx.save();
       ctx.shadowColor = '#3db87a';
@@ -232,11 +224,22 @@ function drawFarm() {
     }
   }
 
-  document.getElementById('farm-cap').textContent =
-    (state.unlockedTiles || []).length + ' / 20 tiles cultivated';
+  // 成员3修改：农场描述文字
+  const FARM_STORIES = [
+    "An empty field waits for its first farmer.",
+    "The land stirs. Something is beginning to grow.",
+    "A humble farm takes shape. Hard work pays off.",
+    "Crops fill the fields. The farm is alive.",
+    "Neighbours gather. A small community flourishes.",
+    "A thriving estate - the manor stands complete. 🏰",
+  ];
+  const tileCount = (state.unlockedTiles || []).length;
+  const story = FARM_STORIES[Math.min(tileCount, FARM_STORIES.length - 1)];
+  document.getElementById('farm-cap').textContent = story;
+  document.getElementById('farm-tile-count').textContent =
+    tileCount + ' / 20 tiles cultivated';
 }
 
-// Lighten a hex colour by `amount` (0-255 per channel)
 function lighten(hex, amount) {
   const n = parseInt(hex.replace('#',''), 16);
   const r = Math.min(255, (n >> 16) + amount);
@@ -280,7 +283,7 @@ function drawDetail(ctx, type, x, y, tw, th) {
     ctx.fillStyle = '#777'; ctx.fillRect(cx - 10, cy - 6, 2, 10); ctx.fillRect(cx + 8, cy - 6, 2, 10); ctx.fillRect(cx - 10, cy - 6, 20, 2);
   } else if (type === 'pond') {
     ctx.fillStyle = '#5aaad0'; ctx.beginPath(); ctx.ellipse(cx, cy + 2, 14, 8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(cx - 2, cy, 8, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.beginPath(); ctx.ellipse(cx - 2, cy, 8, 4, 0, Math.PI * 2); ctx.fill();
   } else if (type === 'silo') {
     ctx.fillStyle = '#a0a0a0'; ctx.fillRect(cx - 6, cy - 10, 12, 20);
     ctx.fillStyle = '#b8b8b8'; ctx.beginPath(); ctx.ellipse(cx, cy - 10, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
@@ -345,7 +348,7 @@ async function startOp() {
   document.getElementById('abort-btn').disabled = false;
   document.getElementById('dur-sl').disabled = true;
   document.getElementById('timer-st').textContent = 'active';
-  document.getElementById('op-hint').textContent = 'Stay focused \u2014 your farm is waiting...';
+  document.getElementById('op-hint').textContent = 'Stay focused — your farm is waiting...';
   state.interval = setInterval(tick, 1000);
 }
 
@@ -372,7 +375,6 @@ async function completeOp() {
   await refreshProfile();
   resetTimer();
   document.getElementById('op-hint').textContent = 'Complete a session to unlock a farm tile';
-  // Show any newly unlocked achievement toasts
   if (res.new_achievements && res.new_achievements.length) {
     setTimeout(() => showAchievementToasts(res.new_achievements), 800);
   }
@@ -499,7 +501,7 @@ async function refreshLog() {
     const ts = s.completed_at || s.started_at || '';
     const timeStr = ts.length >= 16 ? ts.slice(11, 16) : '';
     const msg = s.status === 'completed'
-      ? `${s.duration_mins}-min session complete${s.tile_unlocked !== null ? ' \u2014 ' + TILE_NAMES[s.tile_unlocked] : ''}`
+      ? `${s.duration_mins}-min session complete${s.tile_unlocked !== null ? ' — ' + TILE_NAMES[s.tile_unlocked] : ''}`
       : s.status === 'aborted' ? `${s.duration_mins}-min session abandoned`
       : `${s.duration_mins}-min session expired`;
     return `<div class="log-row"><div class="dot" style="background:${col}"></div><span>${msg}</span><span class="log-t">${timeStr}</span></div>`;
@@ -601,7 +603,6 @@ async function refreshAchievements() {
   const list = document.getElementById('ach-list');
   if (!list) return;
 
-  // Group by category
   const categories = {};
   d.achievements.forEach(a => {
     if (!categories[a.category]) categories[a.category] = [];
@@ -656,7 +657,6 @@ function showAchievementToast(achievement) {
   setTimeout(() => pop.classList.remove('show'), 4000);
 }
 
-// Show achievements toasts sequentially if multiple unlocked at once
 function showAchievementToasts(newAchievements) {
   if (!newAchievements || !newAchievements.length) return;
   newAchievements.forEach((a, i) => {

@@ -77,7 +77,11 @@
     <div class="card" style="padding:8px">
       <canvas id="farm-canvas" height="260" class="farm-canvas"></canvas>
     </div>
-    <div style="font-size:11px;color:#aaa;text-align:center;margin-top:-4px;margin-bottom:12px;letter-spacing:0.5px" id="farm-cap">0 / 20 tiles cultivated</div>
+    <!-- 成员3修改：farm-cap 升级 -->
+    <div style="font-size:12px;color:#3db87a;text-align:center; margin-top:-4px;margin-bottom:2px;font-style:italic; min-height:18px" id="farm-cap"></div>
+    <div style="font-size:10px;color:#aaa;text-align:center; margin-bottom:10px;letter-spacing:0.5px" id="farm-tile-count">
+    0 / 20 tiles cultivated
+    </div>
   </div>
 
   <!-- Focus tab -->
@@ -122,11 +126,21 @@
       <div style="font-size:11px;color:#aaa;margin-bottom:6px" id="streak-display"></div>
       <div class="chart-wrap"><canvas id="focus-chart"></canvas></div>
     </div>
+    <!-- 成员3新增：Honesty Report 卡片 -->
+    <div class="card">
+      <div class="slabel">Honesty Report</div>
+      <div id="honesty-insight"></div>
+      <div style="position:relative;height:120px">
+        <canvas id="honesty-chart"></canvas>
+      </div>
+    </div>
   </div>
 
   <!-- Squad tab -->
   <div id="tab-squad" class="tab">
-    <div class="card">
+    <!-- 成员3修改：新增 momentum-display -->
+    <div id="momentum-display"></div>
+    <div class="card" id="squad-card">
       <div id="squad-content">
         <div class="no-squad" style="color:#bbb;font-size:13px;padding:12px 0">Loading...</div>
       </div>
