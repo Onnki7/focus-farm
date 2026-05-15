@@ -1,5 +1,5 @@
 import csv, io, json, os, secrets, string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from flask import Blueprint, request, session, jsonify, Response
 from core import db, analysis, config, achievements
 from core.auth import login_required
@@ -164,6 +164,79 @@ def squad_status():
                     "squad_code": squad["code"], "members": member_data,
                     "team_ops": team["total_ops"], "team_mins": team["total_mins"],
                     "member_count": len(members)})
+@api_bp.route("/squads/momentum")
+@login_required
+def squad_momentum():
+    uid = session["user_id"]
+    squad = db.get_user_squad(uid)
+    if not squad:
+        return jsonify({"ok": False, "in_squad": False})
+    members = db.get_squad_members(squad["id"])
+    total_members = len(members)
+    if total_members == 0:
+        return jsonify({
+            "ok": True,
+            "momentum": 0,
+            "breakdown": []
+        })
+    today = date.today().isoformat()
+    now = datetime.utcnow()
+    members_active_today = 0
+    sessions_today = 0
+    breakdown = []
+    for m in members:
+        all_sessions = db.get_session_history(m["id"], limit=50)
+        today_sessions = [
+            s for s in all_sessions
+            if s["status"] == "completed"
+            and (s["completed_at"] or "")[:10] == today
+        ]
+        sessions_today += len(today_sessions)
+        if len(today_sessions) > 0:
+            members_active_today += 1
+        completed = [
+            s for s in all_sessions
+            if s["status"] == "completed"
+        ]
+        if completed:
+            last = completed[0]
+            last_dt = datetime.fromisoformat(last["completed_at"])
+            days_ago = (now - last_dt).days
+            note = (
+                "focused today ✓"
+                if days_ago == 0
+                else f"last focused {days_ago}d ago"
+            )
+        else:
+            note = "hasn't focused yet"
+        breakdown.append({
+            "username": m["username"],
+            "sessions_today": len(today_sessions),
+            "note": note,
+        })
+    team_stats = db.get_team_stats(squad["id"])
+    team_ops = team_stats["total_ops"]
+    team_streak = min(team_ops // total_members, 10)
+    momentum = round(
+        (members_active_today / total_members) * 40 +
+        min(team_streak * 5, 30) +
+        min((sessions_today / total_members) * 10, 30)
+    )
+    level = (
+        "� On ffre!" if momentum >= 80 else
+        "� Going strong" if momentum >= 55 else
+        "� Getting there" if momentum >= 30 else
+        "� Quiet day"
+)
+    return jsonify({
+        "ok": True,
+        "momentum": momentum,
+        "level": level,
+        "members_active_today": members_active_today,
+        "total_members": total_members,
+        "sessions_today": sessions_today,
+        "breakdown": breakdown,
+    })
 
 @api_bp.route("/analysis")
 @login_required
