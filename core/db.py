@@ -240,3 +240,17 @@ def get_team_stats(squad_id):
         (squad_id,)).fetchone()
     conn.close()
     return dict(row) if row else {"total_ops": 0, "total_mins": 0}
+
+def get_all_sessions_including_aborted(user_id, days=14):
+    """Fetch both completed AND aborted sessions for honesty graph."""
+    conn = _connect()
+    rows = conn.execute(
+        """SELECT * FROM sessions
+           WHERE user_id=?
+             AND status IN ('completed', 'aborted', 'expired')
+             AND started_at >= datetime('now', ?)
+           ORDER BY started_at ASC""",
+        (user_id, f"-{days} days")
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

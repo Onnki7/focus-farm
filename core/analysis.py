@@ -250,16 +250,95 @@ def summary_stats(user_id: int) -> dict:
         "std_duration":   round(float(np.std(durations)), 1),
     }
 
+def honesty_graph(user_id: int, days: int = 14) -> dict:
+    """
+    Compare intended focus time vs actual completed time per day.
+
+    Intended = sum of duration_mins for ALL started sessions
+    Actual   = sum of duration_mins for COMPLETED sessions only
+    Completion rate = actual / intended * 100
+    """
+    all_rows = db.get_all_sessions_including_aborted(user_id, days)
+    completed_rows = [r for r in all_rows if r["status"] == "completed"]
+
+    if not all_rows:
+        return {
+            "labels": [],
+            "intended": [],
+            "actual": [],
+            "completion_rate": 0,
+            "insight": "No sessions yet — start your first focus session!",
+        }
+
+    # Build DataFrames
+    df_all  = pd.DataFrame(all_rows)
+    df_done = pd.DataFrame(completed_rows) if completed_rows else pd.DataFrame()
+
+    df_all["date"] = pd.to_datetime(
+        df_all["started_at"], errors="coerce", utc=True
+    ).dt.date
+
+    # Full date range
+    today = date.today()
+    date_range = pd.date_range(
+        end=pd.Timestamp(today), periods=days, freq="D"
+    ).date
+
+    # Intended minutes per day (all started sessions)
+    intended_by_date = (
+        df_all.groupby("date")["duration_mins"]
+        .sum()
+        .reindex(date_range, fill_value=0)
+    )
+
+    # Actual minutes per day (completed only)
+    if not df_done.empty:
+        df_done["date"] = pd.to_datetime(
+            df_done["started_at"], errors="coerce", utc=True
+        ).dt.date
+        actual_by_date = (
+            df_done.groupby("date")["duration_mins"]
+            .sum()
+            .reindex(date_range, fill_value=0)
+        )
+    else:
+        actual_by_date = pd.Series(0, index=date_range)
+
+    # Overall completion rate
+    total_intended  = int(intended_by_date.sum())
+    total_actual    = int(actual_by_date.sum())
+    completion_rate = round(total_actual / total_intended * 100) \
+        if total_intended > 0 else 0
+
+    # Human insight line
+    if completion_rate >= 90:
+        insight = "Excellent discipline — you follow through almost every time."
+    elif completion_rate >= 70:
+        insight = f"You complete {completion_rate}% of what you plan. Solid consistency."
+    elif completion_rate >= 50:
+        insight = f"You complete {completion_rate}% of planned sessions. " \
+                  f"Try shorter sessions to boost this."
+    else:
+        insight = f"Only {completion_rate}% completion. " \
+                  f"Consider setting more realistic session lengths."
+
+    return {
+        "labels":          [str(d)[5:] for d in date_range],  # MM-DD
+        "intended":        intended_by_date.tolist(),
+        "actual":          actual_by_date.tolist(),
+        "total_intended":  total_intended,
+        "total_actual":    total_actual,
+        "completion_rate": completion_rate,
+        "insight":         insight,
+    }
 
 # ── 6. Master analysis response ───────────────────────────────────────────────
 
 def get_analysis(user_id: int) -> dict:
-    """
-    Compose all analysis results into a single dict for the /api/analysis endpoint.
-    """
     stats   = summary_stats(user_id)
     hourly  = hourly_distribution(user_id)
     weekday = weekday_breakdown(user_id)
+    honesty = honesty_graph(user_id)      # ← add this line
 
     return {
         "daily_minutes":   daily_minutes(user_id),
@@ -269,5 +348,6 @@ def get_analysis(user_id: int) -> dict:
         "distribution":    hourly["distribution"],
         "weekday_minutes": weekday["weekday_minutes"],
         "best_weekday":    weekday["best_weekday"],
+        "honesty":         honesty,        # ← add this line
         **stats,
     }
