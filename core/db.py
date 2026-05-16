@@ -254,3 +254,18 @@ def get_all_sessions_including_aborted(user_id, days=14):
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+def get_all_sessions_including_aborted(user_id, days=14):
+    conn = _connect()
+    rows = conn.execute(
+        """
+        SELECT * FROM sessions
+        WHERE user_id=?
+          AND status IN ('completed', 'aborted', 'expired')
+          AND started_at >= datetime('now', ?)
+        ORDER BY started_at ASC
+        """,
+        (user_id, f"-{days} days")
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
