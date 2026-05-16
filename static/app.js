@@ -546,6 +546,22 @@ async function refreshChart() {
     `Current streak: ${d.current_streak} day${d.current_streak !== 1 ? 's' : ''} · Longest: ${d.longest_streak}`;
 }
 
+// Quiet hours card
+if (d.quiet_hours) {
+  const card = document.getElementById('quiet-hours-card');
+  const win = document.getElementById('quiet-window');
+  const rec = document.getElementById('quiet-recommendation');
+
+  if (card) card.style.display = 'block';
+  if (win)
+    win.textContent =
+    '🕐 Best window: ' +
+    d.quiet_hours.window_label;
+  if (rec)
+    rec.textContent =
+    d.quiet_hours.recommendation;
+}
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 function showTab(name, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
