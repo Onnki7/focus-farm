@@ -334,6 +334,93 @@ def honesty_graph(user_id: int, days: int = 14) -> dict:
 
 # ── 6. Master analysis response ───────────────────────────────────────────────
 
+def honesty_graph(user_id: int, days: int = 14) -> dict:
+    all_rows = db.get_all_sessions_including_aborted(user_id, days)
+
+    completed_rows = [
+        r for r in all_rows
+        if r["status"] == "completed"
+    ]
+
+    if not all_rows:
+        return {
+            "labels": [],
+            "intended": [],
+            "actual": [],
+            "completion_rate": 0,
+            "insight": "No sessions yet — start your first focus session!",
+        }
+
+    df_all = pd.DataFrame(all_rows)
+    df_done = (
+        pd.DataFrame(completed_rows)
+        if completed_rows
+        else pd.DataFrame()
+    )
+
+    df_all["date"] = pd.to_datetime(
+        df_all["started_at"],
+        errors="coerce",
+        utc=True
+    ).dt.date
+
+    today = date.today()
+
+    date_range = pd.date_range(
+        end=pd.Timestamp(today),
+        periods=days,
+        freq="D"
+    ).date
+
+    intended_by_date = (
+        df_all.groupby("date")["duration_mins"]
+        .sum()
+        .reindex(date_range, fill_value=0)
+    )
+
+    if not df_done.empty:
+        df_done["date"] = pd.to_datetime(
+            df_done["started_at"],
+            errors="coerce",
+            utc=True
+        ).dt.date
+
+        actual_by_date = (
+            df_done.groupby("date")["duration_mins"]
+            .sum()
+            .reindex(date_range, fill_value=0)
+        )
+    else:
+        actual_by_date = pd.Series(0, index=date_range)
+
+    total_intended = int(intended_by_date.sum())
+    total_actual = int(actual_by_date.sum())
+
+    completion_rate = (
+        round(total_actual / total_intended * 100)
+        if total_intended > 0
+        else 0
+    )
+
+    if completion_rate >= 90:
+        insight = "Excellent discipline."
+    elif completion_rate >= 70:
+        insight = "Solid consistency."
+    elif completion_rate >= 50:
+        insight = "Try shorter sessions."
+    else:
+        insight = "Set more realistic goals."
+
+    return {
+        "labels": [str(d)[5:] for d in date_range],
+        "intended": intended_by_date.tolist(),
+        "actual": actual_by_date.tolist(),
+        "total_intended": total_intended,
+        "total_actual": total_actual,
+        "completion_rate": completion_rate,
+        "insight": insight,
+    }
+
 def get_analysis(user_id: int) -> dict:
     stats   = summary_stats(user_id)
     hourly  = hourly_distribution(user_id)
